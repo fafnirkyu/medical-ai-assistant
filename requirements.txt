@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+llama-cpp-python
+sentence-transformers
+sqlite-vss
+datasets
+pandas
