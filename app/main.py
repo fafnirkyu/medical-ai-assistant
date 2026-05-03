@@ -22,6 +22,6 @@ def ask_question(query: str):
 
     return {
         "answer": answer,
-        "source": context[:500],
+        "source": context[:1000],
         "confidence": confidence
     }

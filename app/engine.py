@@ -26,7 +26,7 @@ def search_db(query):
     query_bytes = struct.pack(f"{len(query_vector)}f", *query_vector)
 
     cursor = db.execute("""
-        SELECT m.answer FROM vec_medquad v
+        SELECT m.answer, v.distance FROM vec_medquad v
         LEFT JOIN medquad m ON v.rowid = m.id
         WHERE v.embedding MATCH ? AND k = 1
         ORDER BY v.distance ASC
