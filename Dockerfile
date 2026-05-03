@@ -1,20 +1,23 @@
-# Stage 1: Builder
-FROM python:3.10-slim as builder
-RUN apt-get update && apt-get install -y build-essential gcc
-COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
-
-# Stage 2: Final Image
+# 1. Use a lightweight Python base image
 FROM python:3.10-slim
+
+# 2. Set the working directory inside the container
 WORKDIR /app
-# Copy only the installed packages
-COPY --from=builder /root/.local /root/.local
-COPY . .
 
-ENV PATH=/root/.local/bin:$PATH
+# 3. Install system dependencies (needed for sqlite-vec)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Clean up apt to save space
-RUN apt-get purge -y --auto-remove build-essential gcc && \
-    rm -rf /var/lib/apt/lists/*
+# 4. Copy requirements and install python libraries
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 5. Copy the rest of your application code and your database
+COPY ./app ./app
+
+# 6. Expose the port FastAPI runs on
+EXPOSE 8000
+
+# 7. Command to run the service
+CMD ["python", "app/main.py"]

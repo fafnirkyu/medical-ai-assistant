@@ -1,7 +1,8 @@
 fastapi
 uvicorn
-llama-cpp-python
 sentence-transformers
-sqlite-vss
-datasets
-pandas
+sqlite-vec
+llama-cpp-python
+huggingface_hub
+requests
+streamlit

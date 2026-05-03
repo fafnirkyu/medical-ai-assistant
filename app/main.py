@@ -1,45 +1,18 @@
-import os
 from fastapi import FastAPI
-from llama_cpp import Llama
-from contextlib import asynccontextmanager
-from database import search_medical_data
+from app.engine import search_db, llm
 
-MODEL_PATH = os.getenv("MODEL_PATH", "/app/models/gemma-3-1b-it-Q4_K_M.gguf")
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    app.state.llm = Llama(
-        model_path=MODEL_PATH,
-        n_ctx=2048,
-        n_threads=2,
-        flash_attn=True,
-        verbose=False
-    )
-    print("Model primed and ready.")
-    yield
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 @app.get("/ask")
-async def ask_question(query: str):
-    context, confidence = search_medical_data(query)
-    if confidence < 0.60:
-        disclaimer = "Note: Low confidence match. Always consult a doctor.\n"
-    else:
-        disclaimer = ""
-    prompt = f"### Instruction: Use the context to answer.\nContext: {context}\nQuestion: {query}\n### Response:"
+def ask_question(query: str):
+    context = search_db(query)
+    if not context:
+        context = "No specific medical records found for this query."
     
-    output = app.state.llm(
-        prompt,
-        max_tokens=256,
-        stop=["###"],
-        echo=False
-    )
-    
-    response_text = output["choices"][0]["text"]
+    prompt = f"<|begin_of_text|>system\nYou are a medical assistant. Info: {context}\nuser\n{query}\nassistant\n"
+    response = llm(prompt, max_tokens=256)
     
     return {
-        "answer": f"{disclaimer}{response_text}",
-        "confidence": f"{confidence:.2%}",
-        "source": "MedQuAD Dataset"
+        "answer": response['choices'][0]['text'].strip(),
+        "source": context[:100] if context else "No source"
     }

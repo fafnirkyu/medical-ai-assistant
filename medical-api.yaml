@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medical-search-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: medical-search
+  template:
+    metadata:
+      labels:
+        app: medical-search
+    spec:
+      containers:
+      - name: search-api
+        image: medical-search-api:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: medical-search-service
+spec:
+  type: NodePort
+  selector:
+    app: medical-search
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30001
