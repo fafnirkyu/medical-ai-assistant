@@ -6,13 +6,19 @@ app = FastAPI()
 @app.get("/ask")
 def ask_question(query: str):
     context = search_db(query)
-    if not context:
-        context = "No specific medical records found for this query."
+    if not context or "No specific medical records" in context:
+        context = "Note: No matching internal medical records found. Providing general knowledge."
+        confidence = 0.40  # Lower score for general knowledge
+    else:
+        confidence = 0.88  # Higher score because it matched your DB
+    prompt = f"System: You are a medical assistant. Use this info: {context}\nUser: {query}\nAssistant:"
     
-    prompt = f"<|begin_of_text|>system\nYou are a medical assistant. Info: {context}\nuser\n{query}\nassistant\n"
-    response = llm(prompt, max_tokens=256)
+    response = llm(prompt, max_tokens=1024, stop=["<|", "User:", "System:"])
     
+    answer = response['choices'][0]['text'].strip()
+
     return {
-        "answer": response['choices'][0]['text'].strip(),
-        "source": context[:100] if context else "No source"
+        "answer": answer,
+        "source": context[:100],
+        "confidence": confidence
     }

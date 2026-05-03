@@ -4,3 +4,8 @@ __pycache__/
 *.gguf
 *.parquet
 .env
+__pycache__/
+app/models/*.gguf
+app/data/*.db
+.DS_Store
+*.pyc
