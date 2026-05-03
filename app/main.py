@@ -5,12 +5,15 @@ app = FastAPI()
 
 @app.get("/ask")
 def ask_question(query: str):
-    context = search_db(query)
-    if context == "No data found.":
-        context = "Note: No matching internal medical records found. Providing general knowledge."
-        confidence = 0.40
+    result = search_db(query)
+    
+    if result:
+        raw_score = 1.0 - result['distance']
+        confidence = max(0.1, min(raw_score, 0.95)) # Keep it between 10% and 95%
+        context = result['text']
     else:
-        confidence = 0.88
+        context = "No data found."
+        confidence = 0.30
     prompt = f"System: You are a medical assistant. Use this info: {context}\nUser: {query}\nAssistant:"
     
     response = llm(prompt, max_tokens=1024, stop=["<|", "User:", "System:"])
@@ -19,6 +22,6 @@ def ask_question(query: str):
 
     return {
         "answer": answer,
-        "source": context[:100],
+        "source": context[:500],
         "confidence": confidence
     }

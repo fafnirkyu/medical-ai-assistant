@@ -34,4 +34,6 @@ def search_db(query):
     
     row = cursor.fetchone()
     db.close()
-    return row[0] if row else "No data found."
+    if row:
+        return {"text": row[0], "distance": row[1]}
+    return None
