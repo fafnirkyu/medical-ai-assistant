@@ -9,7 +9,7 @@ def ask_question(query: str):
     
     if result:
         raw_score = 1.0 - result['distance']
-        confidence = max(0.1, min(raw_score, 0.95)) # Keep it between 10% and 95%
+        confidence = max(0.1, min(raw_score, 0.95))
         context = result['text']
     else:
         context = "No data found."

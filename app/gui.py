@@ -27,9 +27,16 @@ if prompt := st.chat_input("How can I help you today?"):
                     answer = data["answer"]
                     context = data.get("source", "No source provided")
                     score = data.get("confidence", 0.0)
-                    
+
                     st.markdown(answer)
-                    # Confidence score
+                    
+                    if score > 0.80:
+                        st.success(f"High Confidence: {int(score*100)}%")
+                    elif score > 0.50:
+                        st.warning(f"Moderate Confidence: {int(score*100)}%")
+                    else:
+                        st.error(f"Low Confidence: {int(score*100)}% - Use caution.")
+                    
                     st.progress(score, text=f"Confidence Score: {int(score*100)}%") 
                     with st.expander("View Source Context"):
                         st.info(context)
