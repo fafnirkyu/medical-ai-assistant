@@ -21,7 +21,7 @@ if prompt := st.chat_input("How can I help you today?"):
     with st.chat_message("assistant"):
         with st.spinner("Searching medical records and thinking..."):
             try:
-                response = requests.get(f"http://127.0.0.1:8000/ask?query={prompt}")
+                response = requests.get(f"http://backend:8000/ask?query={prompt}")
                 if response.status_code == 200:
                     data = response.json()
                     answer = data["answer"]

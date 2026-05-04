@@ -25,3 +25,8 @@ def ask_question(query: str):
         "source": context[:1000],
         "confidence": confidence
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    # 0.0.0.0 is the "Broadcast" address that allows external connections
+    uvicorn.run(app, host="0.0.0.0", port=8000)

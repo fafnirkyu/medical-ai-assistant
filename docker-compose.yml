@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    image: medai-base-image  
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/data:/app/app/data
+    environment:
+      - MODEL_PATH=/app/app/models/your_model.gguf
+    deploy:
+      resources:
+        limits:
+          memory: 700M  
+
+  frontend:
+    image: medai-base-image  
+    command: ["streamlit", "run", "app/gui.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 200M  
