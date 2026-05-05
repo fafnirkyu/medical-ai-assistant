@@ -1,8 +1,14 @@
+# Web Framework & Server
 fastapi
 uvicorn
-sentence-transformers
-sqlite-vec
-llama-cpp-python
-huggingface_hub
-requests
 streamlit
+requests
+
+# Machine Learning & AI
+llama-cpp-python
+sentence-transformers
+huggingface_hub
+datasets
+
+# Database & Vector Search
+sqlite-vec

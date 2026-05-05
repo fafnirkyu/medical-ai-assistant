@@ -6,7 +6,14 @@ RUN apt-get update && apt-get install -y \
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir \
-    fastapi uvicorn sentence-transformers sqlite-vec requests streamlit huggingface_hub
+    fastapi \
+    uvicorn \
+    sentence-transformers \
+    sqlite-vec \
+    requests \
+    streamlit \
+    huggingface_hub \
+    datasets
 
 RUN pip install llama-cpp-python \
     --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu    
