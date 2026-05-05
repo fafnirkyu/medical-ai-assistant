@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   backend:
-    image: yourusername/medai-app:latest  # Change to your Docker Hub image
+    image: takatim123/medai-app:latest  # Change to your Docker Hub image
     ports:
       - "8000:8000"
     volumes:
@@ -14,7 +14,7 @@ services:
           memory: 750M  # Adjusted to stay within 1GB limits
 
   frontend:
-    image: yourusername/medai-app:latest  # Uses the same pre-built image
+    image: takatim123/medai-app:latest  # Uses the same pre-built image
     command: ["streamlit", "run", "app/gui.py", "--server.port=8501", "--server.address=0.0.0.0"]
     ports:
       - "8501:8501"
