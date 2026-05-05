@@ -11,7 +11,7 @@ embed_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def get_llm():
     repo = "unsloth/gemma-3-1b-it-GGUF"
-    file = "gemma-3-1b-it-BF16.gguf"
+    file = "gemma-3-1b-it-Q4_K_M.gguf"
     path = hf_hub_download(repo_id=repo, filename=file, local_dir="app/models")
     return Llama(model_path=path, n_ctx=2048, n_threads=4)
 
