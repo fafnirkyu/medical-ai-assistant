@@ -1,24 +1,32 @@
+import os
 import struct
 import sqlite3
 import sqlite_vec
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
 from sentence_transformers import SentenceTransformer
+from pathlib import Path
 
 # Load models once when the module is imported
 print("Initializing Engines...")
 embed_model = SentenceTransformer('all-MiniLM-L6-v2')
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = os.getenv("DATABASE_PATH", str(BASE_DIR / "app" / "data" / "medical_data.db"))
 
-def get_llm():
-    repo = "unsloth/gemma-3-1b-it-GGUF"
-    file = "gemma-3-1b-it-Q4_K_M.gguf"
-    path = hf_hub_download(repo_id=repo, filename=file, local_dir="app/models")
+repo = "unsloth/gemma-3-1b-it-GGUF"
+file = "gemma-3-1b-it-Q4_K_M.gguf"
+
+MODEL_DIR = BASE_DIR / "app" / "models"
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
+path = hf_hub_download(repo_id=repo, filename=file, local_dir=str(MODEL_DIR))
+
+def get_llm(path):
     return Llama(model_path=path, n_ctx=2048, n_threads=4)
 
-llm = get_llm()
+llm = get_llm(path)
 
 def search_db(query):
-    db = sqlite3.connect("app/data/medical_data.db")
+    db = sqlite3.connect(DB_PATH)
     db.enable_load_extension(True)
     sqlite_vec.load(db)
     
