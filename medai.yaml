@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: takatim123/medai-app:v2
+        image: takatim123/medai-app:v3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
@@ -39,7 +39,7 @@ spec:
           mountPath: /app/app/data
         resources:
           limits:
-            memory: "3Gi" # Scaled back to fit in node memory
+            memory: "3Gi" 
           requests:
             memory: "1.5Gi"
       volumes:
@@ -77,7 +77,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: takatim123/medai-app:v2 
+        image: takatim123/medai-app:v3 
         imagePullPolicy: IfNotPresent
         command: ["streamlit", "run", "app/gui.py", "--server.port=8501", "--server.address=0.0.0.0"]
         ports:
