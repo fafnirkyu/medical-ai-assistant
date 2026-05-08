@@ -18,10 +18,10 @@ RUN pip install --no-cache-dir \
 RUN pip install llama-cpp-python \
     --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu    
 
-COPY ./app ./app
+COPY . .
 
 EXPOSE 8000
-
 ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
 CMD ["python", "app/main.py"]

@@ -4,9 +4,11 @@ import os
 import struct
 from datasets import load_dataset
 from sentence_transformers import SentenceTransformer
+from pathlib import Path
 
-DB_PATH = "app/data/medical_data.db"
-os.makedirs("app/data", exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = os.getenv("DATABASE_PATH", str(BASE_DIR / "app" / "data" / "medical_data.db"))
+Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
 
 def serialize_f32(vector):
     return struct.pack(f"{len(vector)}f", *vector)

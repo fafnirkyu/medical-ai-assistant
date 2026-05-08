@@ -1,7 +1,12 @@
+import os
 import sqlite3
 import sqlite_vec
 import struct
 from sentence_transformers import SentenceTransformer
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = os.getenv("DATABASE_PATH", str(BASE_DIR / "app" / "data" / "medical_data.db"))
 
 # Re-use our serialization helper
 def serialize_f32(vector):
@@ -12,7 +17,7 @@ def search_database(user_query, limit=3):
     model = SentenceTransformer('all-MiniLM-L6-v2')
 
     print("2. Connecting to database...")
-    db = sqlite3.connect("app/data/medical_data.db")
+    db = sqlite3.connect(DB_PATH)
     db.enable_load_extension(True)
     sqlite_vec.load(db)
 
