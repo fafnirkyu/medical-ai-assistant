@@ -12,3 +12,12 @@ datasets
 
 # Database & Vector Search
 sqlite-vec
+fastapi
+uvicorn
+streamlit
+requests
+sentence-transformers
+sqlite-vec
+huggingface_hub
+datasets
+llama-cpp-python
