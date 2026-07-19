@@ -36,12 +36,16 @@ def search_db(query):
     cursor = db.execute("""
         SELECT m.answer, v.distance FROM vec_medquad v
         LEFT JOIN medquad m ON v.rowid = m.id
-        WHERE v.embedding MATCH ? AND k = 1
+        WHERE v.embedding MATCH ? AND k = 5
         ORDER BY v.distance ASC
     """, [query_bytes])
-    
-    row = cursor.fetchone()
+
+    rows = cursor.fetchall()
     db.close()
-    if row:
-        return {"text": row[0], "distance": row[1]}
+
+    # Some MedQuAD entries have an empty/NULL answer field. Skip those and
+    # use the first nearest-neighbor match that actually has answer text.
+    for answer, distance in rows:
+        if answer:
+            return {"text": answer, "distance": distance}
     return None

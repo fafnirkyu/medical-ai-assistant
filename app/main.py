@@ -1,7 +1,11 @@
 from fastapi import FastAPI
-from app.engine import search_db, llm
+from engine import search_db, llm
 
 app = FastAPI()
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.get("/ask")
 def ask_question(query: str):
@@ -14,11 +18,18 @@ def ask_question(query: str):
     else:
         context = "No data found."
         confidence = 0.30
-    prompt = f"System: You are a medical assistant. Use this info: {context}\nUser: {query}\nAssistant:"
-    
-    response = llm(prompt, max_tokens=1024, stop=["<|", "User:", "System:"])
-    
-    answer = response['choices'][0]['text'].strip()
+    response = llm.create_chat_completion(
+        messages=[
+            {
+                "role": "system",
+                "content": f"You are a medical assistant. Use this information to answer the user's question concisely: {context}",
+            },
+            {"role": "user", "content": query},
+        ],
+        max_tokens=512,
+    )
+
+    answer = response['choices'][0]['message']['content'].strip()
 
     return {
         "answer": answer,

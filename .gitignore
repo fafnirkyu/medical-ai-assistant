@@ -9,3 +9,10 @@ app/models/*.gguf
 app/data/*.db
 .DS_Store
 *.pyc
+@"
+.venv/
+__pycache__/
+*.pyc
+app/models/*.gguf
+app/data/*.db
+"@ | Out-File -Encoding utf8 .gitignore

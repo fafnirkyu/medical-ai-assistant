@@ -1,20 +1,17 @@
 version: '3.8'
 services:
   backend:
-    image: takatim123/medai-app:latest  # Change to your Docker Hub image
+    build: .
+    image: medai-rag:local
     ports:
       - "8000:8000"
     volumes:
       - ./app/data:/app/app/data
-    environment:
-      - MODEL_PATH=/app/app/models/your_model.gguf
-    deploy:
-      resources:
-        limits:
-          memory: 750M  # Adjusted to stay within 1GB limits
+      - ./app/models:/app/app/models  
 
   frontend:
-    image: takatim123/medai-app:latest  # Uses the same pre-built image
+    build: .
+    image: medai-rag:local
     command: ["streamlit", "run", "app/gui.py", "--server.port=8501", "--server.address=0.0.0.0"]
     ports:
       - "8501:8501"
@@ -22,7 +19,3 @@ services:
       - BACKEND_URL=http://backend:8000
     depends_on:
       - backend
-    deploy:
-      resources:
-        limits:
-          memory: 200M
