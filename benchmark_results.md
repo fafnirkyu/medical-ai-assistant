@@ -1,8 +1,8 @@
 | Metric | Value |
 |---|---|
-| Cold start | 17.18s |
-| Peak RAM | 1627 MB |
-| Query latency (p50) | 2962 ms |
-| Query latency (p95) | 7347 ms |
+| Cold start | 15.26s |
+| Peak RAM | 1873 MB |
+| Query latency (p50) | 1987 ms |
+| Query latency (p95) | 7278 ms |
 | Requests benchmarked | 18 |
-| Mean confidence | 58% |
+| Mean confidence | 84% |

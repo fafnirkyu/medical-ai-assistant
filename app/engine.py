@@ -4,12 +4,12 @@ import sqlite3
 import sqlite_vec
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 from pathlib import Path
 
-# Load models once when the module is imported
 print("Initializing Engines...")
 embed_model = SentenceTransformer('all-MiniLM-L6-v2')
+reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = os.getenv("DATABASE_PATH", str(BASE_DIR / "app" / "data" / "medical_data.db"))
 
@@ -25,7 +25,7 @@ def get_llm(path):
 
 llm = get_llm(path)
 
-def search_db(query):
+def search_db(query, k=10):
     db = sqlite3.connect(DB_PATH)
     db.enable_load_extension(True)
     sqlite_vec.load(db)
@@ -36,16 +36,22 @@ def search_db(query):
     cursor = db.execute("""
         SELECT m.answer, v.distance FROM vec_medquad v
         LEFT JOIN medquad m ON v.rowid = m.id
-        WHERE v.embedding MATCH ? AND k = 5
+        WHERE v.embedding MATCH ? AND k = ?
         ORDER BY v.distance ASC
-    """, [query_bytes])
+    """, [query_bytes, k])
 
     rows = cursor.fetchall()
     db.close()
 
-    # Some MedQuAD entries have an empty/NULL answer field. Skip those and
-    # use the first nearest-neighbor match that actually has answer text.
-    for answer, distance in rows:
-        if answer:
-            return {"text": answer, "distance": distance}
-    return None
+    candidates = [(answer, distance) for answer, distance in rows if answer]
+    if not candidates:
+        return None
+
+    pairs = [(query, answer) for answer, _ in candidates]
+    rerank_scores = reranker.predict(pairs)
+
+    best_idx = int(rerank_scores.argmax())
+    best_answer, best_distance = candidates[best_idx]
+    best_rerank_score = float(rerank_scores[best_idx])
+
+    return {"text": best_answer, "distance": best_distance, "rerank_score": best_rerank_score}

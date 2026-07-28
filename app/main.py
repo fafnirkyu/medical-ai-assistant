@@ -1,3 +1,4 @@
+import math
 from fastapi import FastAPI
 from engine import search_db, llm
 
@@ -12,7 +13,7 @@ def ask_question(query: str):
     result = search_db(query)
     
     if result:
-        raw_score = 1.0 - result['distance']
+        raw_score = 1 / (1 + math.exp(-result['rerank_score']))
         confidence = max(0.1, min(raw_score, 0.95))
         context = result['text']
     else:
@@ -39,5 +40,4 @@ def ask_question(query: str):
 
 if __name__ == "__main__":
     import uvicorn
-    # 0.0.0.0 is the "Broadcast" address that allows external connections
     uvicorn.run(app, host="0.0.0.0", port=8000)

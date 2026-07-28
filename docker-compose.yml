@@ -7,7 +7,9 @@ services:
       - "8000:8000"
     volumes:
       - ./app/data:/app/app/data
-      - ./app/models:/app/app/models  
+      - ./app/models:/app/app/models   # persist the downloaded GGUF, embedding model, and reranker across restarts
+    environment:
+      - HF_HOME=/app/app/models/hf_cache
 
   frontend:
     build: .
