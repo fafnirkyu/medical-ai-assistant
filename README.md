@@ -10,11 +10,6 @@ A Retrieval-Augmented Generation (RAG) system that answers medical questions usi
 
 Medical Q&A data is [MedQuAD](https://huggingface.co/datasets/lavita/MedQuAD) (Medical Question Answering Dataset), streamed from Hugging Face and embedded with `sentence-transformers/all-MiniLM-L6-v2` into a local vector store (47,441 question/answer pairs indexed).
 
-## 🎥 Demo
-
-[Live demo link — add once deployed]
-[Screen recording / GIF — add here]
-
 ## 🏗️ System Architecture
 
 The application is a microservices-style system with a clean separation between retrieval, reranking, inference, and orchestration:
