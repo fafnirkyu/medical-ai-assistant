@@ -1,43 +1,36 @@
 import math
 from fastapi import FastAPI
-from engine import search_db, llm
+from app.engine import search_db, generate_answer
 
 app = FastAPI()
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
+
 @app.get("/ask")
 def ask_question(query: str):
     result = search_db(query)
-    
+
     if result:
-        raw_score = 1 / (1 + math.exp(-result['rerank_score']))
-        confidence = max(0.1, min(raw_score, 0.95))
-        context = result['text']
+        raw_score = 1 / (1 + math.exp(-result["rerank_score"]))
+        retrieval_score = max(0.1, min(raw_score, 0.95))
+        context = result["text"]
     else:
-        context = "No data found."
-        confidence = 0.30
-    response = llm.create_chat_completion(
-        messages=[
-            {
-                "role": "system",
-                "content": f"You are a medical assistant. Use this information to answer the user's question concisely: {context}",
-            },
-            {"role": "user", "content": query},
-        ],
-        max_tokens=512,
-    )
+        return {
+            "answer": "I could not find a relevant source in the local database, so I cannot verify an answer. Please consult a qualified medical professional for personal advice.",
+            "source": None,
+            "retrieval_score": None,
+        }
 
-    answer = response['choices'][0]['message']['content'].strip()
+    answer = generate_answer(query, context)
 
-    return {
-        "answer": answer,
-        "source": context[:1000],
-        "confidence": confidence
-    }
+    return {"answer": answer, "source": context, "retrieval_score": retrieval_score}
+
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

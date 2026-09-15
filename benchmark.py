@@ -31,7 +31,9 @@ DEFAULT_QUERIES = [
 ]
 
 
-def measure_cold_start(health_url: str, timeout: int = 180, poll_interval: float = 1.0) -> float | None:
+def measure_cold_start(
+    health_url: str, timeout: int = 180, poll_interval: float = 1.0
+) -> float | None:
     """Poll /health from the moment this is called. Start it right after `docker compose up`."""
     print(f"[cold start] polling {health_url} ...")
     start = time.perf_counter()
@@ -58,8 +60,17 @@ def sample_docker_ram(container: str, stop_event, interval: float = 1.0) -> dict
     while not stop_event.is_set():
         try:
             out = subprocess.run(
-                ["docker", "stats", container, "--no-stream", "--format", "{{.MemUsage}}"],
-                capture_output=True, text=True, timeout=5,
+                [
+                    "docker",
+                    "stats",
+                    container,
+                    "--no-stream",
+                    "--format",
+                    "{{.MemUsage}}",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             usage_str = out.stdout.strip().split("/")[0].strip()
             value = float("".join(c for c in usage_str if c.isdigit() or c == "."))
@@ -71,37 +82,51 @@ def sample_docker_ram(container: str, stop_event, interval: float = 1.0) -> dict
         stop_event.wait(interval)
 
     if not samples_mb:
-        print("[ram] no samples collected — check the container name with `docker compose ps`")
+        print(
+            "[ram] no samples collected — check the container name with `docker compose ps`"
+        )
         return None
 
-    result = {"peak_mb": max(samples_mb), "mean_mb": statistics.mean(samples_mb), "n_samples": len(samples_mb)}
-    print(f"[ram] peak: {result['peak_mb']:.1f} MB | mean: {result['mean_mb']:.1f} MB (n={result['n_samples']})")
+    result = {
+        "peak_mb": max(samples_mb),
+        "mean_mb": statistics.mean(samples_mb),
+        "n_samples": len(samples_mb),
+    }
+    print(
+        f"[ram] peak: {result['peak_mb']:.1f} MB | mean: {result['mean_mb']:.1f} MB (n={result['n_samples']})"
+    )
     return result
 
 
-def measure_query_latency(base_url: str, queries: list[str], n_repeats: int = 3) -> dict:
+def measure_query_latency(
+    base_url: str, queries: list[str], n_repeats: int = 3
+) -> dict:
     """Hits GET /ask?query=... for each query n_repeats times."""
     latencies = []
-    confidences = []
+    retrieval_scores = []
 
     print(f"[latency] running {len(queries)} queries x {n_repeats} repeats...")
     for query in queries:
         for _ in range(n_repeats):
             start = time.perf_counter()
             try:
-                r = requests.get(f"{base_url}/ask", params={"query": query}, timeout=120)
+                r = requests.get(
+                    f"{base_url}/ask", params={"query": query}, timeout=120
+                )
                 if r.status_code == 200:
                     latencies.append((time.perf_counter() - start) * 1000)
                     data = r.json()
-                    if "confidence" in data:
-                        confidences.append(data["confidence"])
+                    if data.get("retrieval_score") is not None:
+                        retrieval_scores.append(data["retrieval_score"])
                 else:
                     print(f"  non-200 ({r.status_code}) for: {query[:50]}")
             except requests.exceptions.RequestException as e:
                 print(f"  failed: {query[:50]}... ({e})")
 
     if not latencies:
-        raise RuntimeError("No successful requests — check the URL and that the backend is reachable")
+        raise RuntimeError(
+            "No successful requests — check the URL and that the backend is reachable"
+        )
 
     latencies.sort()
     result = {
@@ -112,10 +137,12 @@ def measure_query_latency(base_url: str, queries: list[str], n_repeats: int = 3)
         "min_ms": min(latencies),
         "max_ms": max(latencies),
     }
-    if confidences:
-        result["mean_confidence"] = statistics.mean(confidences)
+    if retrieval_scores:
+        result["mean_retrieval_score"] = statistics.mean(retrieval_scores)
 
-    print(f"[latency] mean: {result['mean_ms']:.0f}ms | p50: {result['p50_ms']:.0f}ms | p95: {result['p95_ms']:.0f}ms")
+    print(
+        f"[latency] mean: {result['mean_ms']:.0f}ms | p50: {result['p50_ms']:.0f}ms | p95: {result['p95_ms']:.0f}ms"
+    )
     return result
 
 
@@ -132,8 +159,8 @@ def print_summary(cold_start, ram, latency):
     print(f"  Query latency (p95) {latency['p95_ms']:6.0f} ms")
     print(f"  Mean latency         {latency['mean_ms']:6.0f} ms")
     print(f"  Requests measured    {latency['n_requests']:6d}")
-    if "mean_confidence" in latency:
-        print(f"  Mean confidence      {latency['mean_confidence'] * 100:5.1f} %")
+    if "mean_retrieval_score" in latency:
+        print(f"  Mean retrieval score {latency['mean_retrieval_score'] * 100:5.1f} %")
     print("=" * 52 + "\n")
 
 
@@ -149,8 +176,10 @@ def write_markdown(cold_start, ram, latency, path="benchmark_results.md"):
     lines.append(f"| Query latency (p50) | {latency['p50_ms']:.0f} ms |")
     lines.append(f"| Query latency (p95) | {latency['p95_ms']:.0f} ms |")
     lines.append(f"| Requests benchmarked | {latency['n_requests']} |")
-    if "mean_confidence" in latency:
-        lines.append(f"| Mean confidence | {latency['mean_confidence'] * 100:.0f}% |")
+    if "mean_retrieval_score" in latency:
+        lines.append(
+            f"| Mean retrieval score | {latency['mean_retrieval_score'] * 100:.0f}% |"
+        )
 
     with open(path, "w") as f:
         f.write("\n".join(lines) + "\n")
@@ -171,14 +200,27 @@ def write_json(cold_start, ram, latency, path="benchmark_results.json"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--url", required=True, help="Backend base URL, e.g. http://localhost:8000")
-    parser.add_argument("--container", help="Docker container name for RAM sampling, e.g. medai-backend-1")
-    parser.add_argument("--cold-start", action="store_true", help="Measure cold start (run right after startup)")
-    parser.add_argument("--repeats", type=int, default=3, help="Repeats per query (default 3)")
+    parser.add_argument(
+        "--url", required=True, help="Backend base URL, e.g. http://localhost:8000"
+    )
+    parser.add_argument(
+        "--container",
+        help="Docker container name for RAM sampling, e.g. medai-backend-1",
+    )
+    parser.add_argument(
+        "--cold-start",
+        action="store_true",
+        help="Measure cold start (run right after startup)",
+    )
+    parser.add_argument(
+        "--repeats", type=int, default=3, help="Repeats per query (default 3)"
+    )
     parser.add_argument("--queries", nargs="+", default=DEFAULT_QUERIES)
     args = parser.parse_args()
 
-    cold_start_result = measure_cold_start(f"{args.url}/health") if args.cold_start else None
+    cold_start_result = (
+        measure_cold_start(f"{args.url}/health") if args.cold_start else None
+    )
 
     ram_result = None
     ram_thread = None
@@ -186,7 +228,9 @@ if __name__ == "__main__":
     ram_holder = {}
 
     if args.container:
-        print(f"[ram] starting background sampling of '{args.container}' (runs alongside the latency test)...")
+        print(
+            f"[ram] starting background sampling of '{args.container}' (runs alongside the latency test)..."
+        )
 
         def _ram_worker():
             ram_holder["result"] = sample_docker_ram(args.container, stop_event)
@@ -194,7 +238,9 @@ if __name__ == "__main__":
         ram_thread = threading.Thread(target=_ram_worker)
         ram_thread.start()
 
-    latency_result = measure_query_latency(args.url, args.queries, n_repeats=args.repeats)
+    latency_result = measure_query_latency(
+        args.url, args.queries, n_repeats=args.repeats
+    )
 
     if ram_thread is not None:
         stop_event.set()

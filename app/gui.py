@@ -6,7 +6,9 @@ st.set_page_config(page_title="Medical AI Assistant", page_icon="🩺")
 
 st.title("Medical RAG Assistant by Antonio Borges")
 st.markdown("THIS IS A PROOF OF CONCEPT, REMEMBER TO CONSULT A REAL PHYSICIAN.")
-st.markdown("Ask a medical question. The AI will search the database and provide an answer.")
+st.markdown(
+    "Ask a medical question. The AI will search the database and provide an answer."
+)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -23,30 +25,31 @@ if prompt := st.chat_input("How can I help you today?"):
         with st.spinner("Searching medical records and thinking..."):
             try:
                 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
-                response = requests.get(f"{BACKEND_URL}/ask?query={prompt}")
+                response = requests.get(
+                    f"{BACKEND_URL}/ask", params={"query": prompt}, timeout=120
+                )
                 if response.status_code == 200:
                     data = response.json()
                     answer = data["answer"]
-                    context = data.get("source", "No source provided")
-                    score = data.get("confidence", 0.0)
+                    context = data.get("source")
+                    score = data.get("retrieval_score")
 
                     st.markdown(answer)
-                    
-                    if score > 0.80:
-                        st.success(f"High Confidence: {int(score*100)}%")
-                    elif score > 0.50:
-                        st.warning(f"Moderate Confidence: {int(score*100)}%")
-                    else:
-                        st.error(f"Low Confidence: {int(score*100)}% - Use caution.")
-                    
-                    st.progress(score, text=f"Confidence Score: {int(score*100)}%") 
+
+                    if score is not None:
+                        st.caption(
+                            "Retrieval relevance indicator (not medical-answer confidence)."
+                        )
+                        st.progress(score, text=f"Retrieval score: {int(score * 100)}%")
                     with st.expander("View Source Context"):
-                        st.info(context)
-                    
-                    st.session_state.messages.append({
-                        "role": "assistant", 
-                        "content": f"{answer}\n\n*Source: {context}*"
-                    })
+                        st.info(context or "No source retrieved.")
+
+                    st.session_state.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": f"{answer}\n\n*Source: {context or 'None retrieved'}*",
+                        }
+                    )
                 else:
                     st.error("Backend error. Is the API running?")
             except Exception as e:

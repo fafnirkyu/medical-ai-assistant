@@ -1,3 +1,10 @@
+.git
 .venv
 __pycache__
-.git
+*.pyc
+app/data/
+app/models/
+eval/
+tests/
+benchmark_results.*
+backend_log.txt
