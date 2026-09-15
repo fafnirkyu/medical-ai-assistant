@@ -12,3 +12,4 @@ app/models/
 eval/eval_dataset.json
 eval/ragas_results_detailed.csv
 benchmark_results.*
+backend_log.txt
