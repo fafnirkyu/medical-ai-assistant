@@ -1,0 +1,126 @@
+# 1. STORAGE
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: medai-data-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: medai-model-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+---
+# 2. BACKEND
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medai-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: medai-rag:local
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          periodSeconds: 10
+          timeoutSeconds: 3
+        env:
+        - name: HF_HOME
+          value: "/app/app/models/hf_cache"
+        volumeMounts:
+        - name: database-storage
+          mountPath: /app/app/data
+        - name: model-storage
+          mountPath: /app/app/models
+        resources:
+          limits:
+            memory: "3Gi"
+          requests:
+            memory: "1.5Gi"
+      volumes:
+      - name: database-storage
+        persistentVolumeClaim:
+          claimName: medai-data-pvc
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: medai-model-pvc
+---
+# 3. BACKEND SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+---
+# 4. FRONTEND
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medai-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: medai-rag:local
+        imagePullPolicy: IfNotPresent
+        command: ["streamlit", "run", "app/gui.py", "--server.port=8501", "--server.address=0.0.0.0"]
+        ports:
+        - containerPort: 8501
+        env:
+        - name: BACKEND_URL
+          value: "http://backend:8000"
+        resources:
+          limits:
+            memory: "500Mi"
+---
+# 5. FRONTEND SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  type: ClusterIP
+  selector:
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8501

@@ -2,17 +2,19 @@ import argparse
 import json
 import os
 import sqlite3
-import sys
-from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent.parent / "app"))
-from app.engine import search_db, retrieve_contexts, generate_answer, DB_PATH
+from app.engine import DB_PATH
+from app.main import ask_question
 
 
 def sample_questions(n):
     db = sqlite3.connect(DB_PATH)
     rows = db.execute(
-        "SELECT question, answer FROM medquad ORDER BY RANDOM() LIMIT ?", [n]
+        """SELECT question, answer FROM medquad
+           WHERE question IS NOT NULL AND TRIM(question) != ''
+             AND answer IS NOT NULL AND TRIM(answer) != ''
+           ORDER BY RANDOM() LIMIT ?""",
+        [n],
     ).fetchall()
     db.close()
     return rows
@@ -23,19 +25,19 @@ def build_dataset(n):
     records = []
 
     for i, (question, ground_truth) in enumerate(samples):
-        print(f"[{i+1}/{len(samples)}] {question[:60]}...")
+        print(f"[{i + 1}/{len(samples)}] {question[:60]}...")
 
-        top1 = search_db(question)
-        contexts = retrieve_contexts(question, top_n=3)
-        context_for_generation = top1["text"] if top1 else "No data found."
-        answer = generate_answer(question, context_for_generation)
+        response = ask_question(question)
+        source = response["source"]
 
-        records.append({
-            "question": question,
-            "answer": answer,
-            "contexts": contexts if contexts else [context_for_generation],
-            "ground_truth": ground_truth,
-        })
+        records.append(
+            {
+                "question": question,
+                "answer": response["answer"],
+                "contexts": [source] if source else [],
+                "ground_truth": ground_truth,
+            }
+        )
 
     return records
 

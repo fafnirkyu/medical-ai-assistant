@@ -1,32 +1,36 @@
+import math
 from fastapi import FastAPI
-from app.engine import search_db, llm
+from app.engine import search_db, generate_answer
 
 app = FastAPI()
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 
 @app.get("/ask")
 def ask_question(query: str):
     result = search_db(query)
-    
-    if result:
-        raw_score = 1.0 - result['distance']
-        confidence = max(0.1, min(raw_score, 0.95))
-        context = result['text']
-    else:
-        context = "No data found."
-        confidence = 0.30
-    prompt = f"System: You are a medical assistant. Use this info: {context}\nUser: {query}\nAssistant:"
-    
-    response = llm(prompt, max_tokens=1024, stop=["<|", "User:", "System:"])
-    
-    answer = response['choices'][0]['text'].strip()
 
-    return {
-        "answer": answer,
-        "source": context[:1000],
-        "confidence": confidence
-    }
+    if result:
+        raw_score = 1 / (1 + math.exp(-result["rerank_score"]))
+        retrieval_score = max(0.1, min(raw_score, 0.95))
+        context = result["text"]
+    else:
+        return {
+            "answer": "I could not find a relevant source in the local database, so I cannot verify an answer. Please consult a qualified medical professional for personal advice.",
+            "source": None,
+            "retrieval_score": None,
+        }
+
+    answer = generate_answer(query, context)
+
+    return {"answer": answer, "source": context, "retrieval_score": retrieval_score}
+
 
 if __name__ == "__main__":
     import uvicorn
-    # 0.0.0.0 is the "Broadcast" address that allows external connections
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

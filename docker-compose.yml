@@ -1,28 +1,29 @@
-version: '3.8'
 services:
   backend:
-    image: takatim123/medai-app:latest  # Change to your Docker Hub image
+    build: .
+    image: medai-rag:local
     ports:
       - "8000:8000"
     volumes:
       - ./app/data:/app/app/data
+      - ./app/models:/app/app/models   # persist the downloaded GGUF, embedding model, and reranker across restarts
     environment:
-      - MODEL_PATH=/app/app/models/your_model.gguf
-    deploy:
-      resources:
-        limits:
-          memory: 750M  # Adjusted to stay within 1GB limits
+      - HF_HOME=/app/app/models/hf_cache
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 5m
 
   frontend:
-    image: takatim123/medai-app:latest  # Uses the same pre-built image
+    build: .
+    image: medai-rag:local
     command: ["streamlit", "run", "app/gui.py", "--server.port=8501", "--server.address=0.0.0.0"]
     ports:
       - "8501:8501"
     environment:
       - BACKEND_URL=http://backend:8000
     depends_on:
-      - backend
-    deploy:
-      resources:
-        limits:
-          memory: 200M
+      backend:
+        condition: service_healthy

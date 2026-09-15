@@ -5,6 +5,7 @@ Ollama model as the judge.
 Usage:
     python eval/run_ragas.py --dataset eval/eval_dataset.json --model qwen2.5:7b-instruct
 """
+
 import argparse
 import json
 from datetime import datetime, timezone
@@ -15,18 +16,25 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from ragas import evaluate
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
-from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
+from ragas.metrics import (
+    faithfulness,
+    answer_relevancy,
+    context_precision,
+    context_recall,
+)
 
 
 def load_dataset(path):
     with open(path) as f:
         records = json.load(f)
-    return Dataset.from_dict({
-        "question": [r["question"] for r in records],
-        "answer": [r["answer"] for r in records],
-        "contexts": [r["contexts"] for r in records],
-        "ground_truth": [r["ground_truth"] for r in records],
-    })
+    return Dataset.from_dict(
+        {
+            "question": [r["question"] for r in records],
+            "answer": [r["answer"] for r in records],
+            "contexts": [r["contexts"] for r in records],
+            "ground_truth": [r["ground_truth"] for r in records],
+        }
+    )
 
 
 def print_summary(scores):
@@ -39,7 +47,12 @@ def print_summary(scores):
 
 
 def write_markdown(scores, model_name, path="eval/ragas_results.md"):
-    lines = [f"_Judge model: `{model_name}` (local, via Ollama)_", "", "| Metric | Score |", "|---|---|"]
+    lines = [
+        f"_Judge model: `{model_name}` (local, via Ollama)_",
+        "",
+        "| Metric | Score |",
+        "|---|---|",
+    ]
     for metric, value in scores.items():
         lines.append(f"| {metric} | {value:.3f} |")
     with open(path, "w") as f:
@@ -63,18 +76,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", default="eval/eval_dataset.json")
     parser.add_argument("--model", default="qwen2.5:7b-instruct")
-    parser.add_argument("--ollama-host", default="http://host.docker.internal:11434")
+    parser.add_argument("--ollama-host", default="http://localhost:11434")
     args = parser.parse_args()
 
     ds = load_dataset(args.dataset)
 
-    judge_llm = LangchainLLMWrapper(ChatOpenAI(
-    model=args.model,
-    base_url=f"{args.ollama_host}/v1",
-    api_key="ollama",  # Ollama ignores this, but the client requires a non-empty string
-    temperature=0,
-     ))
-    judge_embeddings = LangchainEmbeddingsWrapper(HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2"))
+    judge_llm = LangchainLLMWrapper(
+        ChatOpenAI(
+            model=args.model,
+            base_url=f"{args.ollama_host}/v1",
+            api_key="ollama",  # Ollama ignores this, but the client requires a non-empty string
+            temperature=0,
+        )
+    )
+    judge_embeddings = LangchainEmbeddingsWrapper(
+        HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    )
 
     result = evaluate(
         ds,

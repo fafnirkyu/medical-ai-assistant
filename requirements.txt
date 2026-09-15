@@ -1,14 +1,9 @@
-# Web Framework & Server
 fastapi
 uvicorn
 streamlit
 requests
-
-# Machine Learning & AI
 llama-cpp-python
 sentence-transformers
 huggingface_hub
 datasets
-
-# Database & Vector Search
 sqlite-vec

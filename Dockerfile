@@ -5,23 +5,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir \
-    fastapi \
-    uvicorn \
-    sentence-transformers \
-    sqlite-vec \
-    requests \
-    streamlit \
-    huggingface_hub \
-    datasets
+RUN pip install -r requirements.txt \
+    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
 
-RUN pip install llama-cpp-python \
-    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu    
-
-COPY . .
+COPY app/ ./app/
 
 EXPOSE 8000
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "app/main.py"]
+CMD ["python", "-m", "app.main"]
