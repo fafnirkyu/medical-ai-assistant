@@ -30,6 +30,30 @@ The backend is one FastAPI process with distinct retrieval, reranking, and infer
 - **Transactional ingestion:** The ingestion script rebuilds both tables with matching row IDs in one SQLite transaction. If streaming or embedding fails, SQLite rolls back the rebuild. This is a local-data setup script, not an online production migration.
 - **Retrieval fallback:** Retrieval skips candidates with empty answer fields. If none remain, the API returns an unable-to-verify response without calling the LLM.
 
+## 🧪 Historical RAG quality evaluation (pre-change)
+
+An earlier version of the pipeline was evaluated on 50 sampled MedQuAD questions with RAGAS and a locally run `qwen2.5:7b-instruct` judge via Ollama. These results are a historical diagnostic baseline, **not measurements of the current code** or a clinical accuracy score. The smaller local judge makes the metrics directionally useful rather than ground truth.
+
+| Metric | All 50 questions | Retrieval succeeded (28/50) |
+| --- | --- | --- |
+| Faithfulness | 0.560 | 0.817 |
+| Answer relevancy | 0.412 | 0.712 |
+| Context precision | 0.264 | 0.507 |
+| Context recall | 0.708 | 0.655 |
+
+The [per-example results](eval/ragas_results_detailed.csv) show that 22 of 50 records (44%) used `"No data found."` as their context. In that earlier flow, generation still ran on the placeholder and could produce fluent but unsupported medical text. This exposed a retrieval and no-source handling problem; the run does not establish its root cause.
+
+The current `/ask` route instead returns an explicit unable-to-verify response without calling the LLM when retrieval supplies no source, and an offline test covers that behavior. Transactional ingestion and the evaluation harness also changed. **The 50-question retrieval success rate and RAGAS metrics have not been re-measured on this version**, so no improvement in those scores is claimed.
+
+To run a new evaluation against the current local API behavior, install `requirements-eval.txt`, make the local Ollama judge available, and run:
+
+```bash
+python eval/build_eval_set.py --n 50
+python eval/run_ragas.py --model qwen2.5:7b-instruct
+```
+
+The newer harness records the single retrieved source actually supplied to generation, or an empty context for an abstention. It writes summary files and `eval/ragas_results_detailed.csv`; save the historical CSV elsewhere first if you want to compare both runs.
+
 ## 📊 Benchmarks
 
 These are **historical** measurements from `benchmark.py` against a local Docker deployment (Windows/Docker Desktop, WSL2 backend), before the current safety and API changes. Re-run the benchmark on the final version before citing them as current performance.
@@ -108,7 +132,7 @@ The root-level `medai.yaml` is the historical AWS-oriented manifest, not the cur
 
 ## Evaluation and limitations
 
-The optional `eval/` scripts build a sampled MedQuAD Q&A set and run RAGAS with a local Ollama judge. Install `requirements-eval.txt` and provide an Ollama model to use them; they are not part of deployment or CI. The generated answer is evaluated against the single retrieved source answer supplied to the model.
+The optional `eval/` scripts build a sampled MedQuAD Q&A set and run RAGAS with a local Ollama judge. Install `requirements-eval.txt` and provide an Ollama model to use them; they are not part of deployment or CI. The current harness evaluates the answer against the single retrieved source supplied to the model, or records an empty context when the API abstains.
 
 The shared local LLM serializes generation requests. No clinician review, validated answer-confidence score, source-level citation system, authentication/TLS/rate limiting, or production monitoring is implemented. See the medical disclaimer above.
 
